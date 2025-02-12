@@ -6,11 +6,13 @@ from datetime import timedelta
 from app.core.config import get_settings
 from app.db.repositories.base import BaseRepository
 from app.db.models import CourseDB, SchoolDB, PlatformDB
-from app.models.course import Course
+from app.models.course import EngineerLevel
 from enum import Enum
 import logging
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -26,8 +28,8 @@ class SortOrder(str, Enum):
     ASC = "asc"
     DESC = "desc"
 
-class CourseRepository(BaseRepository[CourseDB, Course, Course]):
-    def __init__(self, db: AsyncSession):
+class CourseRepository(BaseRepository[CourseDB, CourseDB, CourseDB]):
+    def __init__(self, db: Session):
         super().__init__(CourseDB, db)
         self.db = db
         
@@ -213,7 +215,7 @@ class CourseRepository(BaseRepository[CourseDB, Course, Course]):
         return result.scalar()
 
     @cache(expire=timedelta(seconds=settings.CACHE_EXPIRATION_SECONDS))
-    async def get_course(self, course_id: int) -> Optional[Course]:
+    async def get_course(self, course_id: int) -> Optional[CourseDB]:
         return super().get(course_id)
 
     def search_courses(
@@ -233,13 +235,12 @@ class CourseRepository(BaseRepository[CourseDB, Course, Course]):
         result = self.db.execute(query)
         return list(result.scalars().all())
 
-    def bulk_create(self, courses: List[Course]) -> List[Course]:
-        db_courses = [CourseDB(**course.model_dump()) for course in courses]
-        self.db.add_all(db_courses)
+    def bulk_create(self, courses: List[CourseDB]) -> List[CourseDB]:
+        self.db.add_all(courses)
         self.db.commit()
-        for db_course in db_courses:
+        for db_course in courses:
             self.db.refresh(db_course)
-        return db_courses
+        return courses
 
     def bulk_delete(self, course_ids: List[int]) -> int:
         result = self.db.execute(

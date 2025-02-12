@@ -3,6 +3,10 @@ from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    # Project metadata
+    PROJECT_NAME: str = "Courses Catalog API"
+    API_V1_STR: str = "/api/v1"
+    
     # Application settings
     APP_NAME: str = "Courses Catalog API"
     APP_DESCRIPTION: str = "API for managing courses catalog"
@@ -23,25 +27,21 @@ class Settings(BaseSettings):
     RATE_LIMIT_CLEANUP_INTERVAL: int = 60
     
     # CORS settings
-    CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
     CORS_METHODS: List[str] = ["*"]
     CORS_HEADERS: List[str] = ["*"]
     
     # Database settings
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "courses_catalog"
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: str = "5432"
-    
-    DB_ECHO: bool = False
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/courses_catalog"
+    DB_ECHO: bool = True
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_TIMEOUT: int = 30
     
     # Logging settings
     LOG_LEVEL: str = "INFO"
-    LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    LOG_FORMAT: str = "%(levelname)s:     %(message)s"
+    LOG_FILE: str = "app.log"
 
     @property
     def DATABASE_URL(self) -> str:

@@ -6,8 +6,9 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from app.db.models import Base  # Import Base from our models
+from app.db.base_class import Base
 from app.core.config import get_settings
+from app.db.models import CourseDB, SchoolDB, PlatformDB  # Import your models
 
 settings = get_settings()
 

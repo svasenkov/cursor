@@ -19,6 +19,10 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import { coursesApi } from '../api/client';
 import { CourseCardSkeleton } from '../components/CourseCardSkeleton';
+import { CourseCard } from '../components/course/CourseCard';
+import { Search, FilterList } from '@mui/icons-material';
+import { CourseFilters } from '../components/course/CourseFilters';
+import '../styles/CourseList.css';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -53,22 +57,28 @@ export default function CourseList() {
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['courses', page, search, level],
     queryFn: async () => {
-      const result = await coursesApi.getAll({
-        skip: (page - 1) * ITEMS_PER_PAGE,
-        limit: ITEMS_PER_PAGE,
-        engineer_level: level || undefined,
-        search_term: search || undefined,
-      });
-      return result;
+      try {
+        const result = await coursesApi.getAll({
+          skip: (page - 1) * ITEMS_PER_PAGE,
+          limit: ITEMS_PER_PAGE,
+          engineer_level: level || undefined,
+          search_term: search || undefined,
+        });
+        return result;
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+        throw error;
+      }
     },
     keepPreviousData: true,
+    retry: 1, // Only retry once
   });
 
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box className="course-list-container">
         <Typography variant="h4" gutterBottom>
-          Courses
+          Loading Courses...
         </Typography>
         <Grid container spacing={3}>
           {[...Array(6)].map((_, index) => (
@@ -83,93 +93,95 @@ export default function CourseList() {
 
   if (isError) {
     return (
-      <Alert severity="error" sx={{ mt: 2 }}>
-        {error instanceof Error ? error.message : 'Error loading courses'}
-      </Alert>
+      <Box className="course-list-container">
+        <Alert 
+          severity="error" 
+          sx={{ mt: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          }
+        >
+          {error instanceof Error ? error.message : 'Error loading courses'}
+        </Alert>
+      </Box>
     );
   }
 
-  const courses = data?.items || [];
-  const totalCourses = data?.total || 0;
+  const courses = Array.isArray(data?.items) ? data.items : [];
+  const totalCourses = typeof data?.total === 'number' ? data.total : 0;
+
+  console.log('Rendering courses:', courses);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Courses {totalCourses > 0 && `(${totalCourses})`}
-      </Typography>
+    <Box className="course-list-container">
+      <Box className="course-list-header">
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            fontWeight: 600,
+            color: 'rgb(67, 67, 68)'
+          }}
+        >
+          Courses {totalCourses > 0 && (
+            <Typography 
+              component="span" 
+              color="text.secondary"
+            >
+              ({totalCourses})
+            </Typography>
+          )}
+        </Typography>
+      </Box>
 
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Search courses"
-            onChange={(e) => debouncedSearch(e.target.value)}
-          />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <FormControl fullWidth>
-            <InputLabel>Engineer Level</InputLabel>
-            <Select value={level} onChange={(e) => setLevel(e.target.value as string)}>
-              <MenuItem value="">All Levels</MenuItem>
-              <MenuItem value="junior">Junior</MenuItem>
-              <MenuItem value="middle">Middle</MenuItem>
-              <MenuItem value="senior">Senior</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
+      <Box className="course-filters">
+        <CourseFilters
+          onSearch={debouncedSearch}
+          level={level}
+          onLevelChange={(value) => setLevel(value)}
+        />
+      </Box>
 
       {courses.length > 0 ? (
         <>
           <Grid container spacing={3}>
             {courses.map((course) => (
               <Grid item xs={12} sm={6} md={4} key={course.id}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {course.title}
-                    </Typography>
-                    <Typography color="textSecondary" gutterBottom>
-                      {course.instructor}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 2 }}>
-                      {course.description.substring(0, 150)}...
-                    </Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="h6" color="primary">
-                        ${course.price}
-                      </Typography>
-                      <Button
-                        component={RouterLink}
-                        to={`/courses/${course.id}`}
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                      >
-                        View Details
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
+                <CourseCard course={course} />
               </Grid>
             ))}
           </Grid>
 
           {totalCourses > ITEMS_PER_PAGE && (
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
               <Pagination
                 count={Math.ceil(totalCourses / ITEMS_PER_PAGE)}
                 page={page}
                 onChange={(_, value) => setPage(value)}
                 color="primary"
+                size="large"
+                shape="rounded"
               />
             </Box>
           )}
         </>
       ) : (
-        <Alert severity="info">
-          No courses found. {search || level ? 'Try adjusting your filters.' : ''}
-        </Alert>
+        <Box 
+          sx={{ 
+            textAlign: 'center', 
+            py: 8,
+            backgroundColor: 'background.paper',
+            borderRadius: 2,
+          }}
+        >
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No courses found
+          </Typography>
+          <Typography color="text.secondary">
+            Try adjusting your search or filter criteria
+          </Typography>
+        </Box>
       )}
     </Box>
   );

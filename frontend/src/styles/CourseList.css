@@ -1,0 +1,40 @@
+.course-list-container {
+  padding: 24px;
+}
+
+.course-list-header {
+  margin: 0 -8px;
+  width: auto;
+  height: 44px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  font-family: "SF Pro Text", "SF Pro Icons", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-size: 106.25%;
+}
+
+.course-filters {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.course-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.no-courses {
+  text-align: center;
+  padding: 64px 24px;
+  background-color: #ffffff;
+  border-radius: 8px;
+}
+
+.course-list-header h4 {
+  color: rgb(67, 67, 68);
+} 

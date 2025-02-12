@@ -8,40 +8,49 @@ import logging
 import time
 import threading
 import asyncio
+import sys
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-# Async engine
-async_engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DB_ECHO,
-    pool_size=settings.DB_POOL_SIZE,
-    max_overflow=settings.DB_MAX_OVERFLOW,
-    pool_timeout=settings.DB_POOL_TIMEOUT
-)
+def get_db_url() -> str:
+    """Get database URL with proper driver based on context"""
+    settings = get_settings()
+    is_alembic = 'alembic' in sys.modules
+    
+    if is_alembic:
+        return settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql+psycopg2")
+    return settings.DATABASE_URL
 
-# Sync engine for scripts
-sync_engine = create_engine(
-    settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql"),
-    echo=settings.DB_ECHO,
-    pool_size=settings.DB_POOL_SIZE,
-    max_overflow=settings.DB_MAX_OVERFLOW,
-    pool_timeout=settings.DB_POOL_TIMEOUT
-)
+# Create engines based on context
+def create_engines():
+    """Create appropriate database engines"""
+    settings = get_settings()
+    db_url = get_db_url()
+    
+    engine_args = {
+        "echo": settings.DB_ECHO,
+        "pool_size": settings.DB_POOL_SIZE,
+        "max_overflow": settings.DB_MAX_OVERFLOW,
+        "pool_timeout": settings.DB_POOL_TIMEOUT
+    }
+    
+    if 'postgresql+asyncpg' in db_url:
+        return create_async_engine(db_url, **engine_args)
+    return create_engine(db_url, **engine_args)
 
-# Async session
+engine = create_engines()
+
+# Session factories
 async_session_maker = sessionmaker(
-    async_engine,
+    engine, 
     class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False
+    expire_on_commit=False
 )
 
-# Sync session for scripts
+# Sync session for scripts/migrations
 SessionLocal = sessionmaker(
-    bind=sync_engine,
+    bind=engine,
     autocommit=False,
     autoflush=False
 )
@@ -62,7 +71,7 @@ class DatabaseManager:
     async def initialize(self):
         """Initialize the database engine and session factory"""
         if self._engine is None:
-            self._engine = async_engine
+            self._engine = engine
             self._session_factory = async_session_maker
         return self._engine
 
@@ -74,22 +83,8 @@ class DatabaseManager:
 
 db_manager = DatabaseManager()
 
-async def get_db():
-    """Async dependency function to get DB session"""
-    async with async_session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except SQLAlchemyError as e:
-            logger.error(f"Database session error: {str(e)}")
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
-
-@asynccontextmanager
-async def get_db_context():
-    """Async context manager for database sessions"""
+async def get_db() -> AsyncSession:
+    """Dependency for getting async DB sessions"""
     async with async_session_maker() as session:
         try:
             yield session
@@ -98,8 +93,18 @@ async def get_db_context():
             logger.error(f"Database error: {str(e)}")
             await session.rollback()
             raise
-        except Exception as e:
-            logger.error(f"Unexpected error: {str(e)}")
+        finally:
+            await session.close()
+
+@asynccontextmanager
+async def get_db_context():
+    """Context manager for DB sessions"""
+    async with async_session_maker() as session:
+        try:
+            yield session
+            await session.commit()
+        except SQLAlchemyError as e:
+            logger.error(f"Database error: {str(e)}")
             await session.rollback()
             raise
         finally:

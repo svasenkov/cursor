@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ARRAY
 from sqlalchemy.orm import relationship
-from .base import Base
+from app.db.base_class import Base
 
 class PlatformDB(Base):
     __tablename__ = "platforms"

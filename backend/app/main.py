@@ -20,6 +20,7 @@ from app.services.course_service import CourseService
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.schemas.course import CourseListResponse
+from app.api.api_v1.api import api_router
 
 # Setup logging
 setup_logging()
@@ -27,27 +28,26 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    description=settings.APP_DESCRIPTION,
-    version=settings.APP_VERSION,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
 # Add middleware
 app.add_middleware(LoggingMiddleware)
 
-# Add CORS middleware
+# Add CORS middleware with proper origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=settings.CORS_METHODS,
-    allow_headers=settings.CORS_HEADERS,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 # Include routers with API prefix
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Include additional routers
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
 app.include_router(schools_router, prefix="/api/schools", tags=["schools"])
 app.include_router(platforms_router, prefix="/api/platforms", tags=["platforms"])

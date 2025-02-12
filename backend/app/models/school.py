@@ -1,11 +1,14 @@
-from pydantic import BaseModel, Field, HttpUrl
-from datetime import date
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.orm import relationship
+from app.db.base_class import Base
 
-class School(BaseModel):
-    name: str = Field(..., description="Name of the school")
-    address: HttpUrl = Field(..., description="URL of the school's website")
-    logo: HttpUrl = Field(..., description="URL to the school's logo")
-    foundation_date: date = Field(..., description="Date when the school was founded") 
-    
-    class Config:
-        from_attributes = True  # This enables ORM mode
+class School(Base):
+    __tablename__ = "schools"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    address = Column(String)
+    logo = Column(String)
+    foundation_date = Column(String)
+
+    courses = relationship("Course", back_populates="school")

@@ -12,6 +12,26 @@ def load_json(file_path: Path) -> dict:
     with open(file_path, 'r') as f:
         return json.load(f)
 
+def parse_date(date_str: str) -> datetime.date:
+    """Parse date string to date object"""
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+async def migrate_schools(db, schools_data):
+    for school_data in schools_data:
+        school = SchoolDB(
+            name=school_data["name"],
+            address=school_data["address"],
+            logo=school_data["logo"],
+            foundation_date=parse_date(school_data["foundation_date"])
+        )
+        db.add(school)
+    await db.commit()
+
 def migrate_data():
     db = SessionLocal()
     try:
@@ -28,17 +48,7 @@ def migrate_data():
         db.commit()
 
         # Migrate schools
-        for school in schools_data["data"]:
-            existing_school = db.query(SchoolDB).filter(SchoolDB.name == school["name"]).first()
-            if not existing_school:
-                db_school = SchoolDB(
-                    name=school["name"],
-                    address=school["address"],
-                    logo=school["logo"],
-                    foundation_date=datetime.strptime(school["foundation_date"], "%Y-%m-%d").date()
-                )
-                db.add(db_school)
-        db.commit()
+        await migrate_schools(db, schools_data["data"])
 
         # Migrate platforms
         for platform in platforms_data["data"]:

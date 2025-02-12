@@ -10,21 +10,37 @@ const api = axios.create({
   },
 });
 
-// Add response interceptor for error handling
-api.interceptors.response.use(
-  response => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 422) {
-      // Handle validation errors
-      return Promise.reject(new Error('Validation error'));
-    }
-    if (error.response?.status === 503) {
-      // Handle service unavailable
-      return Promise.reject(new Error('Service temporarily unavailable'));
-    }
-    return Promise.reject(error);
+// Custom error class
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public code?: string
+  ) {
+    super(message);
+    this.name = 'APIError';
   }
-);
+}
+
+// Error handler
+const handleError = (error: unknown) => {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    const message = error.response?.data?.detail || error.message;
+    
+    switch (status) {
+      case 404:
+        throw new APIError('Resource not found', status);
+      case 422:
+        throw new APIError('Validation error', status);
+      case 503:
+        throw new APIError('Service temporarily unavailable', status);
+      default:
+        throw new APIError(message, status);
+    }
+  }
+  throw error;
+};
 
 interface CourseResponse {
   items: Course[];
@@ -40,27 +56,26 @@ export const coursesApi = {
     max_price?: number;
     categories?: string[];
     search_term?: string;
-  }): Promise<CourseResponse> => {
+  }) => {
     try {
       const { data } = await api.get<CourseResponse>('/courses', { params });
-      
-      // Validate response structure
-      if (!data?.items || !Array.isArray(data.items) || typeof data.total !== 'number') {
-        throw new Error('Invalid API response format');
-      }
-      
       return data;
     } catch (error) {
-      if (error instanceof AxiosError) {
-        throw new Error(`Failed to fetch courses: ${error.message}`);
-      }
-      throw error;
+      throw handleError(error);
     }
   },
 
   getById: async (id: number) => {
-    const { data } = await api.get<Course>(`/courses/${id}`);
-    return data;
+    try {
+      const { data } = await api.get<Course>(`/courses/${id}`);
+      return data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new Error('Course not found');
+      }
+      console.error('Error fetching course:', error);
+      throw error;
+    }
   },
 
   getStatistics: async () => {

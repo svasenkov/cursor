@@ -7,12 +7,13 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error?: Error;
+  error: Error | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
+    error: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -30,12 +31,17 @@ export class ErrorBoundary extends Component<Props, State> {
           <Typography variant="h5" gutterBottom>
             Something went wrong
           </Typography>
+          <Typography color="text.secondary" paragraph>
+            {this.state.error?.message || 'An unexpected error occurred'}
+          </Typography>
           <Button
             variant="contained"
-            onClick={() => window.location.reload()}
-            sx={{ mt: 2 }}
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.href = '/';
+            }}
           >
-            Reload Page
+            Return to Home
           </Button>
         </Box>
       );
