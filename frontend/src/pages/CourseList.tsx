@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Box,
@@ -18,13 +18,37 @@ import {
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { coursesApi } from '../api/client';
+import { CourseCardSkeleton } from '../components/CourseCardSkeleton';
 
 const ITEMS_PER_PAGE = 10;
+
+// Simple debounce utility
+function useDebounce<T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+) {
+  const timeoutRef = useCallback<any>(() => {}, []);
+
+  return useCallback(
+    (...args: Parameters<T>) => {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => callback(...args), delay);
+    },
+    [callback, delay, timeoutRef]
+  );
+}
 
 export default function CourseList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState('');
+
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1); // Reset to first page when search changes
+  }, []);
+
+  const debouncedSearch = useDebounce(handleSearch, 300);
 
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['courses', page, search, level],
@@ -35,17 +59,24 @@ export default function CourseList() {
         engineer_level: level || undefined,
         search_term: search || undefined,
       });
-      console.log('API Response:', result);
       return result;
     },
+    keepPreviousData: true,
   });
-
-  console.log('Component render state:', { data, isLoading, error, isError });
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Courses
+        </Typography>
+        <Grid container spacing={3}>
+          {[...Array(6)].map((_, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <CourseCardSkeleton />
+            </Grid>
+          ))}
+        </Grid>
       </Box>
     );
   }
@@ -72,8 +103,7 @@ export default function CourseList() {
           <TextField
             fullWidth
             label="Search courses"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => debouncedSearch(e.target.value)}
           />
         </Grid>
         <Grid item xs={12} md={6}>

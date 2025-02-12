@@ -8,6 +8,7 @@ import CourseList from './pages/CourseList';
 import CourseDetails from './pages/CourseDetails';
 import SchoolList from './pages/SchoolList';
 import PlatformList from './pages/PlatformList';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,24 +21,26 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<CourseList />} />
-              <Route path="/index.html" element={<Navigate to="/" replace />} />
-              <Route path="/courses" element={<CourseList />} />
-              <Route path="/courses/:id" element={<CourseDetails />} />
-              <Route path="/schools" element={<SchoolList />} />
-              <Route path="/platforms" element={<PlatformList />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Layout>
-        </Router>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<CourseList />} />
+                <Route path="/index.html" element={<Navigate to="/" replace />} />
+                <Route path="/courses" element={<CourseList />} />
+                <Route path="/courses/:id" element={<CourseDetails />} />
+                <Route path="/schools" element={<SchoolList />} />
+                <Route path="/platforms" element={<PlatformList />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Layout>
+          </Router>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

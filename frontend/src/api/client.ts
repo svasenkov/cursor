@@ -43,19 +43,17 @@ export const coursesApi = {
   }): Promise<CourseResponse> => {
     try {
       const { data } = await api.get<CourseResponse>('/courses', { params });
-      console.log('Raw API response:', data);
       
-      // Check if response has the expected structure
-      if (!data || typeof data !== 'object' || !('items' in data) || !('total' in data)) {
-        throw new Error('Invalid response format from API');
+      // Validate response structure
+      if (!data?.items || !Array.isArray(data.items) || typeof data.total !== 'number') {
+        throw new Error('Invalid API response format');
       }
       
-      return {
-        items: data.items,
-        total: data.total,
-      };
+      return data;
     } catch (error) {
-      console.error('API Error:', error);
+      if (error instanceof AxiosError) {
+        throw new Error(`Failed to fetch courses: ${error.message}`);
+      }
       throw error;
     }
   },
