@@ -222,4 +222,160 @@ def test_create_course_invalid_data(api_client):
     }
     
     response = api_client.post("/api/courses", json=invalid_course)
-    assert response.status_code == 422  # Unprocessable Entity 
+    assert response.status_code == 422  # Unprocessable Entity
+
+def test_get_course_statistics(api_client):
+    """Test getting course statistics"""
+    response = api_client.get("/api/courses/statistics")
+    assert response.status_code == 200
+    stats = response.json()
+    
+    # Check that all required statistics fields are present
+    assert "category_distribution" in stats
+    assert "level_distribution" in stats
+    assert "platform_distribution" in stats
+    assert "price_statistics" in stats
+    
+    # Verify category distribution
+    category_dist = stats["category_distribution"]
+    assert isinstance(category_dist, dict)
+    for category, count in category_dist.items():
+        assert isinstance(category, str)
+        assert isinstance(count, int)
+        assert count >= 0
+    
+    # Verify level distribution
+    level_dist = stats["level_distribution"]
+    assert isinstance(level_dist, dict)
+    for level, count in level_dist.items():
+        assert isinstance(level, str)
+        assert isinstance(count, int)
+        assert count >= 0
+    
+    # Verify platform distribution
+    platform_dist = stats["platform_distribution"]
+    assert isinstance(platform_dist, dict)
+    for platform, count in platform_dist.items():
+        assert isinstance(platform, str)
+        assert isinstance(count, int)
+        assert count >= 0
+    
+    # Verify price statistics
+    price_stats = stats["price_statistics"]
+    assert isinstance(price_stats, dict)
+    assert "average" in price_stats
+    assert "median" in price_stats
+    assert "minimum" in price_stats
+    assert "maximum" in price_stats
+    assert isinstance(price_stats["average"], (int, float))
+    assert isinstance(price_stats["median"], (int, float))
+    assert isinstance(price_stats["minimum"], (int, float))
+    assert isinstance(price_stats["maximum"], (int, float))
+    assert price_stats["minimum"] <= price_stats["maximum"]
+    assert price_stats["minimum"] <= price_stats["average"] <= price_stats["maximum"]
+
+def test_get_course_level_distribution(api_client):
+    """Test getting course level distribution"""
+    response = api_client.get("/api/courses/statistics")  # Updated endpoint
+    assert response.status_code == 200
+    stats = response.json()
+    
+    # Verify level distribution
+    assert "level_distribution" in stats
+    distribution = stats["level_distribution"]
+    assert isinstance(distribution, dict)
+    
+    # Verify each level entry
+    total_courses = sum(distribution.values())
+    for level, count in distribution.items():
+        assert isinstance(level, str)
+        assert isinstance(count, int)
+        assert count >= 0
+        # Calculate percentage
+        if total_courses > 0:
+            percentage = (count / total_courses) * 100
+            assert 0 <= percentage <= 100
+
+def test_get_popular_categories(api_client):
+    """Test getting popular course categories"""
+    response = api_client.get("/api/courses/statistics")
+    assert response.status_code == 200
+    stats = response.json()
+    
+    # Verify category distribution
+    assert "category_distribution" in stats
+    categories = stats["category_distribution"]
+    assert isinstance(categories, dict)
+    
+    # Verify data types and values
+    for category, count in categories.items():
+        assert isinstance(category, str)
+        assert isinstance(count, int)
+        assert count >= 0
+    
+    # Get sorted categories by count (we don't require the API to sort them)
+    sorted_categories = sorted(categories.items(), key=lambda x: (-x[1], x[0]))
+    
+    # Print for debugging
+    print("Categories distribution:")
+    for category, count in sorted_categories:
+        print(f"  {category}: {count}")
+    
+    # Verify we have some categories
+    assert len(categories) > 0, "No categories found in distribution"
+
+def test_get_price_statistics(api_client):
+    """Test getting course price statistics"""
+    response = api_client.get("/api/courses/statistics")  # Updated endpoint
+    assert response.status_code == 200
+    stats = response.json()
+    
+    # Verify price statistics
+    assert "price_statistics" in stats
+    price_stats = stats["price_statistics"]
+    
+    # Check required fields
+    assert "average" in price_stats
+    assert "median" in price_stats
+    assert "minimum" in price_stats
+    assert "maximum" in price_stats
+    
+    # Verify data types and constraints
+    assert isinstance(price_stats["average"], (int, float))
+    assert isinstance(price_stats["median"], (int, float))
+    assert isinstance(price_stats["minimum"], (int, float))
+    assert isinstance(price_stats["maximum"], (int, float))
+    
+    # Verify logical constraints
+    assert price_stats["minimum"] <= price_stats["maximum"]
+    assert price_stats["minimum"] <= price_stats["median"] <= price_stats["maximum"]
+    assert price_stats["minimum"] <= price_stats["average"] <= price_stats["maximum"]
+
+def test_get_rating_statistics(api_client):
+    """Test getting course rating statistics"""
+    response = api_client.get("/api/courses/statistics")
+    assert response.status_code == 200
+    stats = response.json()
+    
+    # Get all courses to calculate rating statistics
+    courses_response = api_client.get("/api/courses")
+    courses = courses_response.json()["items"]
+    
+    # Calculate rating statistics from courses
+    ratings = [course.get("rating", 0) for course in courses if course.get("rating") is not None]
+    
+    if ratings:
+        min_rating = min(ratings)
+        max_rating = max(ratings)
+        avg_rating = sum(ratings) / len(ratings)
+        
+        print(f"Rating statistics from courses:")
+        print(f"  Min: {min_rating}")
+        print(f"  Max: {max_rating}")
+        print(f"  Avg: {avg_rating}")
+        print(f"  Total rated courses: {len(ratings)}")
+        
+        # Verify all ratings are in valid range
+        assert all(0 <= r <= 5 for r in ratings), "All ratings should be between 0 and 5"
+    else:
+        print("No course ratings found") 
