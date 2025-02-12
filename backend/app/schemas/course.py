@@ -85,4 +85,13 @@ class CourseListResponse(BaseModel):
     page: int = 0
     size: int = 10
 
-    model_config = ConfigDict(from_attributes=True) 
+    model_config = ConfigDict(from_attributes=True)
+
+class CourseResponse(BaseModel):
+    id: int
+    title: str
+    description: str
+    duration: str
+
+    class Config:
+        from_attributes = True 

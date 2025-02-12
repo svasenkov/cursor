@@ -1,9 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_db
-from app.schemas.course import Course, CourseListResponse
+from app.schemas.course import Course, CourseListResponse, CourseResponse
 from app.services.course_service import CourseService
 import logging
+from app.db.database import get_session
+from app.models.course import Course as DBCourse
+from typing import List
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -44,4 +47,18 @@ async def get_courses(
         raise HTTPException(
             status_code=500,
             detail="Internal server error while retrieving courses"
-        ) 
+        )
+
+@router.get("/courses", response_model=List[CourseResponse])
+async def get_courses_from_db(session: AsyncSession = Depends(get_session)):
+    result = await session.execute(DBCourse.__table__.select())
+    courses = result.fetchall()
+    return [
+        {
+            "id": course.id,
+            "title": course.title,
+            "description": course.description,
+            "duration": course.duration
+        }
+        for course in courses
+    ] 

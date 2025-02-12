@@ -5,12 +5,16 @@ export interface Course {
   instructor: string;
   duration: string;
   price: number;
+  school_id: number;
+  platform_id: number;
   school: School;
   platform: Platform;
   categories: string[];
   engineer_level: string;
   students_amount: number;
   rating: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface School {
@@ -46,6 +50,8 @@ export const CourseSchema = z.object({
   instructor: z.string(),
   duration: z.string(),
   price: z.number(),
+  school_id: z.number().optional(),
+  platform_id: z.number().optional(),
   school: z.object({
     id: z.number(),
     name: z.string(),
@@ -57,5 +63,7 @@ export const CourseSchema = z.object({
   categories: z.array(z.string()),
   engineer_level: z.string(),
   students_amount: z.number(),
-  rating: z.number()
+  rating: z.number(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
 }); 

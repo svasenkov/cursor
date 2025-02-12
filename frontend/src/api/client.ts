@@ -28,11 +28,18 @@ const handleError = (error: unknown) => {
     const status = error.response?.status;
     const message = error.response?.data?.detail || error.message;
     
+    console.error('API Error:', {
+      status,
+      message,
+      data: error.response?.data,  // Log the full error response
+      requestData: error.config?.data  // Log the request data
+    });
+    
     switch (status) {
       case 404:
         throw new APIError('Resource not found', status);
       case 422:
-        throw new APIError('Validation error', status);
+        throw new APIError(`Validation error: ${message}`, status);
       case 503:
         throw new APIError('Service temporarily unavailable', status);
       default:
@@ -78,9 +85,39 @@ export const coursesApi = {
     }
   },
 
+  create: async (courseData: Omit<Course, 'id'>) => {
+    try {
+      const { data } = await api.post<Course>('/courses', courseData);
+      return data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+
+  update: async (id: number, courseData: Partial<Course>) => {
+    try {
+      const { data } = await api.put<Course>(`/courses/${id}`, courseData);
+      return data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+
+  delete: async (id: number) => {
+    try {
+      await api.delete(`/courses/${id}`);
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+
   getStatistics: async () => {
-    const { data } = await api.get('/courses/statistics');
-    return data;
+    try {
+      const { data } = await api.get('/courses/statistics');
+      return data;
+    } catch (error) {
+      throw handleError(error);
+    }
   },
 };
 

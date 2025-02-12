@@ -31,6 +31,9 @@ run_backend() {
         exit 1
     fi
     
+    # Initialize the database
+    python -c "from app.db.init_db import init_db; import asyncio; asyncio.run(init_db())"
+    
     poetry run uvicorn app.main:app --reload &
     BACKEND_PID=$!
     echo -e "${GREEN}Backend server started (PID: $BACKEND_PID)${NC}"
