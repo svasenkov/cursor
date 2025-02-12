@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Dict, Any, Optional
 import logging
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.schemas.course import CourseListResponse
 from app.api.api_v1.api import api_router
+from pydantic import BaseModel
 
 # Setup logging
 setup_logging()
@@ -51,6 +52,54 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
 app.include_router(schools_router, prefix="/api/schools", tags=["schools"])
 app.include_router(platforms_router, prefix="/api/platforms", tags=["platforms"])
+
+class Course(BaseModel):
+    title: str
+    description: str
+    instructor: str
+    duration: int
+
+# In-memory storage for testing
+courses = {}
+last_id = 0
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+@app.get("/api/courses")
+def get_courses():
+    return list(courses.values())
+
+@app.get("/api/courses/{course_id}")
+def get_course(course_id: int):
+    if course_id not in courses:
+        raise HTTPException(status_code=404, detail="Course not found")
+    return courses[course_id]
+
+@app.post("/api/courses", status_code=status.HTTP_201_CREATED)
+def create_course(course: Course):
+    global last_id
+    last_id += 1
+    course_dict = course.model_dump()
+    course_dict["id"] = last_id
+    courses[last_id] = course_dict
+    return course_dict
+
+@app.put("/api/courses/{course_id}")
+def update_course(course_id: int, course: Course):
+    if course_id not in courses:
+        raise HTTPException(status_code=404, detail="Course not found")
+    course_dict = course.model_dump()
+    course_dict["id"] = course_id
+    courses[course_id] = course_dict
+    return course_dict
+
+@app.delete("/api/courses/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_course(course_id: int):
+    if course_id not in courses:
+        raise HTTPException(status_code=404, detail="Course not found")
+    del courses[course_id]
 
 @app.get("/api/health")
 async def health_check() -> Dict[str, Any]:

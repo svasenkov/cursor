@@ -86,4 +86,25 @@ Thumbs.db
 
 # Data files
 /app/data/*
-!/app/data/courses.json  # Keep the sample data file 
+!/app/data/courses.json  # Keep the sample data file
+!/app/data/test_*.json   # Keep test data files
+
+# Poetry
+poetry.lock
+.poetry/
+dist/
+
+# Python Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+nosetests.xml
+coverage/
+.nox/
+
+# HTTP client
+.http-client/
+.rest-client/
+requests-debug.log 

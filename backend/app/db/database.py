@@ -9,24 +9,38 @@ import time
 import threading
 import asyncio
 import sys
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.orm import declarative_base
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-def get_db_url() -> str:
-    """Get database URL with proper driver based on context"""
-    settings = get_settings()
-    is_alembic = 'alembic' in sys.modules
-    
-    if is_alembic:
-        return settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql+psycopg2")
-    return settings.DATABASE_URL
+# Use sqlite+aiosqlite:/// for async SQLite
+SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL.replace(
+    "sqlite:///", "sqlite+aiosqlite:///", 1
+)
+
+# Create async engine
+engine = create_async_engine(
+    SQLALCHEMY_DATABASE_URL,
+    echo=settings.DB_ECHO,
+    future=True,
+)
+
+# Create async session maker
+async_session_maker = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+Base = declarative_base()
 
 # Create engines based on context
 def create_engines():
     """Create appropriate database engines"""
     settings = get_settings()
-    db_url = get_db_url()
+    db_url = SQLALCHEMY_DATABASE_URL
     
     engine_args = {
         "echo": settings.DB_ECHO,
@@ -88,11 +102,6 @@ async def get_db() -> AsyncSession:
     async with async_session_maker() as session:
         try:
             yield session
-            await session.commit()
-        except SQLAlchemyError as e:
-            logger.error(f"Database error: {str(e)}")
-            await session.rollback()
-            raise
         finally:
             await session.close()
 
@@ -102,7 +111,6 @@ async def get_db_context():
     async with async_session_maker() as session:
         try:
             yield session
-            await session.commit()
         except SQLAlchemyError as e:
             logger.error(f"Database error: {str(e)}")
             await session.rollback()

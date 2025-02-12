@@ -1,59 +1,46 @@
-from functools import lru_cache
-from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import List, Optional
 
 class Settings(BaseSettings):
-    # Project metadata
-    PROJECT_NAME: str = "Courses Catalog API"
+    PROJECT_NAME: str = "Course API"
     API_V1_STR: str = "/api/v1"
-    
-    # Application settings
-    APP_NAME: str = "Courses Catalog API"
-    APP_DESCRIPTION: str = "API for managing courses catalog"
     APP_VERSION: str = "1.0.0"
     APP_ENV: str = "development"
-    DEBUG: bool = True
-
-    # Server settings
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
-    
-    # Cache settings
-    CACHE_EXPIRATION_SECONDS: int = 30
-    CACHE_PREFIX: str = "courses_api"
-    
-    # Rate limiting
-    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
-    RATE_LIMIT_CLEANUP_INTERVAL: int = 60
-    
-    # CORS settings
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
-    CORS_METHODS: List[str] = ["*"]
-    CORS_HEADERS: List[str] = ["*"]
+    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     
     # Database settings
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/courses_catalog"
-    DB_ECHO: bool = True
-    DB_POOL_SIZE: int = 5
-    DB_MAX_OVERFLOW: int = 10
-    DB_POOL_TIMEOUT: int = 30
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
+    POSTGRES_HOST: Optional[str] = None
+    POSTGRES_PORT: Optional[str] = None
+    POSTGRES_DB: Optional[str] = None
+    DATABASE_URL: Optional[str] = None
     
-    # Logging settings
-    LOG_LEVEL: str = "INFO"
-    LOG_FORMAT: str = "%(levelname)s:     %(message)s"
-    LOG_FILE: str = "app.log"
-
-    @property
-    def DATABASE_URL(self) -> str:
-        """Construct database URL from components"""
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    # Server settings
+    HOST: Optional[str] = None
+    PORT: Optional[int] = None
+    DEBUG: Optional[bool] = None
+    
+    # Other settings
+    LOG_LEVEL: Optional[str] = None
+    LOG_FORMAT: Optional[str] = None
+    LOG_FILE: Optional[str] = None
+    CACHE_EXPIRATION_SECONDS: Optional[int] = None
+    DB_ECHO: Optional[bool] = None
+    DB_POOL_SIZE: Optional[int] = None
+    DB_MAX_OVERFLOW: Optional[int] = None
+    DB_POOL_TIMEOUT: Optional[int] = None
+    RATE_LIMIT_REQUESTS_PER_MINUTE: Optional[int] = None
+    RATE_LIMIT_CLEANUP_INTERVAL: Optional[int] = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
+        env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="allow"
+        extra="allow"  # Allow extra fields
     )
 
-@lru_cache
+_settings = Settings()
+
 def get_settings() -> Settings:
-    return Settings() 
+    return _settings 

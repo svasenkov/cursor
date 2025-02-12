@@ -1,0 +1,3 @@
+sqlalchemy-utils
+pytest
+pytest-asyncio 
