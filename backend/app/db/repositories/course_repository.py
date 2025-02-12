@@ -10,6 +10,7 @@ from app.models.course import Course
 from enum import Enum
 import logging
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -26,8 +27,9 @@ class SortOrder(str, Enum):
     DESC = "desc"
 
 class CourseRepository(BaseRepository[CourseDB, Course, Course]):
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         super().__init__(CourseDB, db)
+        self.db = db
         
     async def get_filtered_courses(
         self,
@@ -244,4 +246,35 @@ class CourseRepository(BaseRepository[CourseDB, Course, Course]):
             CourseDB.__table__.delete().where(CourseDB.id.in_(course_ids))
         )
         self.db.commit()
-        return result.rowcount 
+        return result.rowcount
+
+    async def get_courses(
+        self,
+        skip: int = 0,
+        limit: int = 10,
+        engineer_level: Optional[str] = None,
+        search_term: Optional[str] = None,
+    ) -> Tuple[List[CourseDB], int]:
+        query = select(CourseDB)
+        
+        if engineer_level:
+            query = query.where(CourseDB.engineer_level == engineer_level)
+        
+        if search_term:
+            search_filter = or_(
+                CourseDB.title.ilike(f"%{search_term}%"),
+                CourseDB.description.ilike(f"%{search_term}%"),
+                CourseDB.instructor.ilike(f"%{search_term}%"),
+            )
+            query = query.where(search_filter)
+
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        total = await self.db.scalar(count_query)
+
+        # Get paginated results
+        query = query.offset(skip).limit(limit)
+        result = await self.db.execute(query)
+        courses = result.scalars().all()
+
+        return courses, total 

@@ -4,15 +4,21 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true,
     port: 3000,
-    open: true,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
       },
     },
+  },
+  preview: {
+    port: 3000,
+    strictPort: true,
   },
   build: {
     outDir: 'dist',
@@ -23,4 +29,5 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
   },
+  base: '/',
 }); 

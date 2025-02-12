@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import logging
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -15,6 +15,11 @@ from app.routers.courses_router import router as courses_router
 from app.routers.schools import router as schools_router
 from app.routers.platforms import router as platforms_router
 from app.db.utils import check_db_connection
+from app.db.repositories.course_repository import CourseRepository
+from app.services.course_service import CourseService
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.database import get_db
+from app.schemas.course import CourseListResponse
 
 # Setup logging
 setup_logging()
@@ -118,6 +123,22 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def startup_event():
     """Initialize cache on startup"""
     FastAPICache.init(InMemoryBackend())
+
+@app.get("/api/courses", response_model=CourseListResponse)
+async def get_courses(
+    skip: int = 0,
+    limit: int = 10,
+    engineer_level: Optional[str] = None,
+    search_term: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    course_service = CourseService(db)
+    return await course_service.get_courses(
+        skip=skip,
+        limit=limit,
+        engineer_level=engineer_level,
+        search_term=search_term
+    )
 
 if __name__ == "__main__":
     import uvicorn

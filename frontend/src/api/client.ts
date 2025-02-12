@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { Course, School, Platform } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -10,6 +10,27 @@ const api = axios.create({
   },
 });
 
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  response => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 422) {
+      // Handle validation errors
+      return Promise.reject(new Error('Validation error'));
+    }
+    if (error.response?.status === 503) {
+      // Handle service unavailable
+      return Promise.reject(new Error('Service temporarily unavailable'));
+    }
+    return Promise.reject(error);
+  }
+);
+
+interface CourseResponse {
+  items: Course[];
+  total: number;
+}
+
 export const coursesApi = {
   getAll: async (params?: {
     skip?: number;
@@ -19,9 +40,24 @@ export const coursesApi = {
     max_price?: number;
     categories?: string[];
     search_term?: string;
-  }) => {
-    const { data } = await api.get<{ items: Course[]; total: number }>('/courses', { params });
-    return data;
+  }): Promise<CourseResponse> => {
+    try {
+      const { data } = await api.get<CourseResponse>('/courses', { params });
+      console.log('Raw API response:', data);
+      
+      // Check if response has the expected structure
+      if (!data || typeof data !== 'object' || !('items' in data) || !('total' in data)) {
+        throw new Error('Invalid response format from API');
+      }
+      
+      return {
+        items: data.items,
+        total: data.total,
+      };
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
   },
 
   getById: async (id: number) => {

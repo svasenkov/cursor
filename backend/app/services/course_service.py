@@ -159,15 +159,17 @@ class CourseService:
         self,
         skip: int = 0,
         limit: int = 10,
-        filters: Dict[str, Any] = None
-    ) -> Tuple[List[Course], int]:
-        try:
-            courses, total = await self.repository.get_filtered_courses(
-                skip=skip,
-                limit=limit,
-                **filters if filters else {}
-            )
-            return courses, total
-        except Exception as e:
-            logger.error(f"Error getting courses: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error retrieving courses") 
+        engineer_level: Optional[str] = None,
+        search_term: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        courses, total = await self.repository.get_courses(
+            skip=skip,
+            limit=limit,
+            engineer_level=engineer_level,
+            search_term=search_term,
+        )
+        
+        return {
+            "items": [course.to_dict() for course in courses],
+            "total": total
+        } 
