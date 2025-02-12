@@ -40,4 +40,9 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
-pythonpath = ["."] 
+pythonpath = ["."]
+markers = [
+    "health: marks tests related to health check endpoint",
+    "courses: marks tests related to course CRUD operations",
+    "statistics: marks tests related to statistics endpoints"
+] 
