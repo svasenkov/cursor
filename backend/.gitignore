@@ -82,4 +82,8 @@ local_settings.py
 
 # System Files
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Data files
+/app/data/*
+!/app/data/courses.json  # Keep the sample data file 
